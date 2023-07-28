@@ -1,6 +1,14 @@
 from hashlib import pbkdf2_hmac
 from settings import JWT_SECRET_KEY
 
+# from app import mydb
+import mysql.connector
+
+mydb = mysql.connector.connect(
+    host="localhost", user="root", password="root", database="python_auth"
+)
+
+
 import os
 import jwt
 
@@ -30,14 +38,19 @@ def generate_hash(plain_password, password_salt):
 
 def db_write(query, params):
     print(query, params)
-    return True
-    # cursor = db.connection.cursor()
-    # try:
-    #     cursor.execute(query, params)
-    #     db.connection.commit()
-    #     cursor.close()
+    # return True
+    # cursor = mydb.connection.cursor()
 
-    #     return True
+    mycursor = mydb.cursor(dictionary=True)
+
+    # try:
+    mycursor.execute(query, params)
+    mydb.commit()
+    # cursor.execute(query, params)
+    # db.connection.commit()
+    # cursor.close()
+
+    return True
 
     # except MySQLdb._exceptions.IntegrityError:
     #     cursor.close()
@@ -46,35 +59,51 @@ def db_write(query, params):
 
 def db_read(query, params=None):
     print(query, params)
+    mycursor = mydb.cursor(dictionary=True)
+
     # cursor = db.connection.cursor()
-    # if params:
-    #     cursor.execute(query, params)
-    # else:
-    #     cursor.execute(query)
+    if params:
+        # cursor.execute(query, params)
+        mycursor.execute(query, params)
+    else:
+        # cursor.execute(query)
+        mycursor.execute(query)
 
     # entries = cursor.fetchall()
+    entries = mycursor.fetchall()
     # cursor.close()
 
-    # content = []
+    content = []
 
-    # for entry in entries:
-    #     content.append(entry)
-
-    return [
-        {
-            "id": 1,
-            "email": "sweety",
-            "password_hash": "adasdad",
-            "password_salt": "asdads",
-        }
-    ]
-    # return content
+    for entry in entries:
+        content.append(entry)
+    return content
 
 
 def generate_jwt_token(content):
+    print("generate_jwt_token - 1", content)
     encoded_content = jwt.encode(content, JWT_SECRET_KEY, algorithm="HS256")
-    token = str(encoded_content).split("'")[1]
+    print("generate_jwt_token - 2", encoded_content, JWT_SECRET_KEY)
+    # token = str(encoded_content).split("'")
+    token = encoded_content
+    print("generate_jwt_token - 3", token)
     return token
+
+
+def verify_jwt_token(token):
+    print("verify_jwt_token - 1", token)
+    decoded_token = jwt.decode(
+        token,
+        JWT_SECRET_KEY,
+        algorithms=[
+            "HS256",
+        ],
+    )
+    print("verify_jwt_token - 2", decoded_token, JWT_SECRET_KEY)
+    # token = str(decoded_token).split("'")
+    decoded_token
+    print("verify_jwt_token - 3", decoded_token)
+    return decoded_token
 
 
 def validate_user(email, password):
@@ -93,8 +122,9 @@ def validate_user(email, password):
 
         if password_hash == saved_password_hash:
             user_id = current_user[0]["id"]
-            print("Step5")
+            print("Step5", user_id)
             jwt_token = generate_jwt_token({"id": user_id})
+            print("jwt_token", jwt_token)
             return jwt_token
         else:
             print("Step5 Else")
@@ -102,3 +132,9 @@ def validate_user(email, password):
 
     else:
         return False
+
+
+def get_user_by_id(id):
+    print(id)
+    current_user = db_read("SELECT * FROM users WHERE id = %s", (id,))
+    return current_user

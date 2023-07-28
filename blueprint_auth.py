@@ -8,6 +8,8 @@ from utils import (
     generate_hash,
     db_write,
     validate_user,
+    verify_jwt_token,
+    get_user_by_id,
 )
 
 
@@ -17,7 +19,15 @@ def register_user():
     user_email = request.json["email"]
     user_password = request.json["password"]
     user_confirm_password = request.json["confirm_password"]
-
+    print(
+        user_email,
+        user_password,
+        user_confirm_password,
+        user_password == user_confirm_password,
+    )
+    print(
+        validate_user_input("authentication", email=user_email, password=user_password)
+    )
     if user_password == user_confirm_password and validate_user_input(
         "authentication", email=user_email, password=user_password
     ):
@@ -44,9 +54,17 @@ def login_user():
     print("Valided", user_token)
 
     if user_token:
-        return jsonify({"jwt_token": "asda"})
-        # return jsonify({"jwt_token": user_token})
+        # return jsonify({"jwt_token": "asda"})
+        return jsonify({"jwt_token": user_token})
     else:
         return Response(status=401)
         # print("asda")
         # return jsonify({"jwt_token": "asda"})
+
+
+@authentication.route("/verify_user", methods=["POST"])
+def verify_user():
+    token = request.json["token"]
+    data = verify_jwt_token(token)
+    user = get_user_by_id(data["id"])
+    return jsonify({"data": user})
